@@ -2,6 +2,8 @@
 local voucherId = ARGV[1] --优惠卷ID
 
 local userId = ARGV[2] -- 用户ID
+-- 1.3.订单id
+local orderId = ARGV[3] --订单id
 
 -- 2 redis的key
 
@@ -20,4 +22,8 @@ end
 redis.call('incrby', stockKey,-1)
 
 redis.call('sadd',OrderKey, userId)
+
+-- 3.6.发送消息到队列中， XADD stream.orders * k1 v1 k2 v2 ...
+redis.call('xadd', 'stream.orders', '*', 'userId', userId, 'voucherId', voucherId, 'id', orderId)
+
 return 0
