@@ -24,11 +24,11 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         //不存在，拦截，返回401状态码
-//        if(UserHolder.getUser() == null){
-//            response.setStatus(401);
-//            return false;
-//        }
-//        //放行
+        if(UserHolder.getUser() == null){
+            response.setStatus(401);
+            return false;
+        }
+        //放行
         return true;
     }
 }

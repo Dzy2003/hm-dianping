@@ -92,7 +92,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     List<MapRecord<String, Object, Object>> records = stringRedisTemplate.opsForStream().read(
                             Consumer.from("g1", "c1"),//指定消费者组和消费者
                             StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)),//指定每次取的数量和阻塞时间
-                            StreamOffset.create(queueName, ReadOffset.latest())//指定队列和每次取的位置
+                            StreamOffset.create(queueName, ReadOffset.lastConsumed())//指定队列和每次取的位置
                     );
                     //2.是否为空
                     if(records == null || records.isEmpty()){
