@@ -45,7 +45,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 //        Function<Long,Shop> function = (Long d) ->{
 //            return this.getById(d);
 //        };
-        Shop shop = cacheClient.queryWithLogicalExpire(
+        Shop shop = cacheClient.queryWithMutex(
                 RedisConstants.CACHE_SHOP_KEY, id, Shop.class,
                 this::getById,RedisConstants.CACHE_SHOP_TTL,TimeUnit.MINUTES);
 
