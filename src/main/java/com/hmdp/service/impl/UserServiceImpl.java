@@ -13,13 +13,19 @@ import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.*;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
+import org.springframework.data.redis.connection.ReactiveStringCommands;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -71,7 +77,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if(user == null){
             User newUser = new User();
             newUser.setPhone(phone);
-            newUser.setNickName(SystemConstants.USER_NICK_NAME_PREFIX +RandomUtil.randomString(10));
+            newUser.setNickName(SystemConstants.USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
             save(newUser);
         }
         //将用户信息保存到redis中，并且生成一个token返回给前端
@@ -84,5 +90,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //设置有效期
         stringRedisTemplate.expire(key, RedisConstants.LOGIN_USER_TTL,TimeUnit.MINUTES);
         return Result.ok(token);
+    }
+
+    @Override
+    public Result sign() {
+        Long uid = UserHolder.getUser().getId();
+        val now = LocalDateTime.now();
+        val key = RedisConstants.USER_SIGN_KEY + uid.toString() + now.format(DateTimeFormatter.ofPattern(":YYYYMM"));
+        stringRedisTemplate.opsForValue().setBit(key, now.getDayOfMonth()-1 ,true);
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        Long uid = UserHolder.getUser().getId();
+        val now = LocalDateTime.now();
+        val key = RedisConstants.USER_SIGN_KEY + uid.toString() + now.format(DateTimeFormatter.ofPattern(":YYYYMM"));
+        val commands = BitFieldSubCommands.create()
+                .get(BitFieldSubCommands.BitFieldType.unsigned(now.getDayOfMonth()))
+                .valueAt(0);
+        List<Long> field = stringRedisTemplate.opsForValue().bitField(key, commands);
+        if(field == null || field.isEmpty()) return Result.ok(0);
+        Long signBitMap = field.get(0);
+        if(signBitMap == null || signBitMap == 0) return Result.ok(0);
+        int count = 0;
+        while((signBitMap & 1) == 1){
+            count++;
+            signBitMap >>>= 1;
+        }
+        return Result.ok(count);
     }
 }

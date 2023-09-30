@@ -203,6 +203,35 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }
 
     /**
+     * 创建订单操作
+     * @param voucherOrder 订单信息得实体类
+     * @return
+     */
+    @Transactional
+    @Override
+    public void GetcreateVoucherOrder(VoucherOrder voucherOrder) {
+        //实现一人一单
+
+        Integer count = lambdaQuery()
+                .eq(VoucherOrder::getUserId, voucherOrder.getUserId())
+                .eq(VoucherOrder::getVoucherId, voucherOrder.getUserId())
+                .count();
+        if (count > 0) {
+            log.error("用户重复购买");
+        }
+        //扣减库存
+        boolean success = iSeckillVoucherService.lambdaUpdate()
+                .setSql("stock= stock -1")
+                .eq(SeckillVoucher::getVoucherId, voucherOrder.getVoucherId())
+                .gt(SeckillVoucher::getStock, 0)
+                .update();
+        if (!success) {
+            log.error("库存不足");
+        }
+        save(voucherOrder);
+    }
+
+    /**
      * 旧，使用阻塞队列实现秒杀
      * @param voucherId
      * @return
@@ -284,32 +313,5 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 //        }
 //    }
 
-    /**
-     * 创建订单操作
-     * @param voucherOrder 订单信息得实体类
-     * @return
-     */
-    @Transactional
-    @Override
-    public void GetcreateVoucherOrder(VoucherOrder voucherOrder) {
-        //实现一人一单
 
-            Integer count = lambdaQuery()
-                    .eq(VoucherOrder::getUserId, voucherOrder.getUserId())
-                    .eq(VoucherOrder::getVoucherId, voucherOrder.getUserId())
-                    .count();
-            if (count > 0) {
-                log.error("用户重复购买");
-            }
-            //扣减库存
-            boolean success = iSeckillVoucherService.lambdaUpdate()
-                    .setSql("stock= stock -1")
-                    .eq(SeckillVoucher::getVoucherId, voucherOrder.getVoucherId())
-                    .gt(SeckillVoucher::getStock, 0)
-                    .update();
-            if (!success) {
-                log.error("库存不足");
-            }
-            save(voucherOrder);
-    }
 }
